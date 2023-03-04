@@ -36,7 +36,7 @@ elif arg_is 'setupB'; then
 elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
   echo 'working on Side-A'
 
-  while [ -z "$DEV" ]; do
+  while [ -z "$DEV" ]; do {
     # e.g.: default via 10.0.2.2 dev ens3 proto dhcp src 10.0.2.15 metric 100
     DEV="$( ip route list exact 0.0.0.0/0 | cut -d' ' -f5 )"	# e.g. ens3
   } done
@@ -57,8 +57,8 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
   iptables -t nat -I POSTROUTING -s 192.168.10.0/24 -j MASQUERADE
 
   ping -c1 "$GW_IP6" || GW_IP6='fe80::1'
-  ip -6 address add $PUBIP6/64   dev $DEV
-  ip -6 route   add 2000::/3 via $GW_IP6 dev $DEV
+  ip -6 address add $PUBIP6/64   dev "$DEV"
+  ip -6 route   add 2000::/3 via $GW_IP6 dev "$DEV"
   sysctl net.ipv6.conf.all.forwarding=1
   ip6tables -t nat -I POSTROUTING -s fc00::/64 -j MASQUERADE
 elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-A.pubkey; then
