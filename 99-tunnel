@@ -1,0 +1,85 @@
+#!/bin/sh
+
+ARG="$1"
+arg_is() { case "$ARG" in "$1") true ;; *) false ;; esac; }
+
+WGPORT_SIDEA=12345
+
+if   arg_is 'ping'; then
+  ping -c1 >/dev/null 2>/dev/null 192.168.10.1 || true
+elif arg_is 'setupA'; then
+  cd /etc/wireguard && umask 077
+  wg genkey > privatekey
+  wg pubkey < privatekey > publickey
+  echo "My public IP-address: $( wget -qO - http://eth0.me )"
+  chmod 0600 ./*
+  echo READY
+elif arg_is 'setupB'; then
+  cd /etc/wireguard && umask 077
+  wg genkey > privatekey
+  wg pubkey < privatekey > publickey
+  echo "Please enter public IP-address of side-A: "
+  read -r IP
+  echo "$IP" >/etc/wireguard/side-A.pubkey
+  echo "Uploading SSH-publickey to root@$IP - please enter password"
+  ssh-copy-id "root@$IP"
+  echo "Uploading my wireguard-publickey to root@$IP:/etc/wireguard/side-B.pubkey"
+  scp publickey "root@$IP:/etc/wireguard/side-B.pubkey"
+  echo "Downloading wireguard-publickey from Side-A to /etc/wireguard/side-A.pubkey"
+  scp "root@$IP:/etc/wireguard/publickey" /etc/wireguard/side-A.pubkey
+  crontab -l | grep -q "$0 ping" || {
+    echo >cron "* * * * * $0 ping"
+    crontab cron
+  }
+  chmod 0600 ./*
+  echo READY
+elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
+  echo 'on_side_A'
+
+  DEV=eth0
+  PUBIP6='2a00:5080:1:1c6::1'
+  GW_IP6='2a00:5080:1:1c6::'		# autofallback to fe80::1
+
+  ip link add wg0 type wireguard
+  ip address add 192.168.10.1/24 dev wg0
+  ip address add fc00::1/64 dev wg0
+  wg set wg0 private-key /etc/wireguard/privatekey
+  wg set wg0 listen-port $WGPORT_SIDEA
+  wg set wg0 peer "$PUBKEY_OTHERSIDE" allowed-ips 0.0.0.0/0,::/0
+  ip link set wg0 up
+
+  sysctl net.ipv4.ip_forward=1
+  sysctl net.ipv4.conf.all.rp_filter=0
+  iptables -t nat -I POSTROUTING -s 192.168.10.0/24 -j MASQUERADE
+
+  ping -c1 "$GW_IP6" || GW_IP6='fe80::1'
+  ip -6 address add $PUBIP6/64   dev $DEV
+  ip -6 route   add 2000::/3 via $GW_IP6 dev $DEV
+  sysctl net.ipv6.conf.all.forwarding=1
+  ip6tables -t nat -I POSTROUTING -s fc00::/64 -j MASQUERADE
+elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-A.pubkey; then
+  echo 'on_side_B'
+
+  PRIVIP4_OTHERSIDE="192.168.10.1"
+  PRIVIP6_OTHERSIDE="fc00::1"
+  read -r IP4_SIDEA </etc/wireguard/side-A.ip4
+
+  ip link add wg0 type wireguard
+  ip address add 192.168.10.2/24 dev wg0
+  ip address add fc00::2/64 dev wg0
+  wg set wg0 private-key /etc/wireguard/privatekey
+  wg set wg0 peer "$PUBKEY_OTHERSIDE" allowed-ips 192.168.10.0/24 endpoint "${IP4_SIDEA}:${WGPORT_SIDEA}"
+  ip link set wg0 up
+
+  # default via 10.0.2.2 dev ens3 proto dhcp src 10.0.2.15 metric 100
+  GW_IP="$( ip route list exact 0.0.0.0/0 | cut -d' ' -f3 )"
+  GWDEV="$( ip route list exact 0.0.0.0/0 | cut -d' ' -f5 )"
+
+  # wait for tunnel
+  while ! ping -c1 "$PRIVIP4_OTHERSIDE"; do sleep 1; done
+
+  ip route add   0.0.0.0/1 dev wg0
+  ip route add 128.0.0.0/1 dev wg0
+  ip route add "$PUBIP4_OTHERSIDE/32" via "$GW_IP" dev "$GWDEV"
+  ip -6 route add 2000::/3 via $PRIVIP6_OTHERSIDE dev wg0
+fi
