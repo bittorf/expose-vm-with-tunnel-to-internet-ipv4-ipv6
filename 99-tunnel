@@ -36,7 +36,11 @@ elif arg_is 'setupB'; then
 elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
   echo 'working on Side-A'
 
-  DEV="$( ip route list exact 0.0.0.0/0 | cut -d' ' -f5 )"	# e.g. ens3
+  while [ -z "$DEV" ]; do
+    # e.g.: default via 10.0.2.2 dev ens3 proto dhcp src 10.0.2.15 metric 100
+    DEV="$( ip route list exact 0.0.0.0/0 | cut -d' ' -f5 )"	# e.g. ens3
+  } done
+
   PUBIP6='2a00:5080:1:1c6::1'
   GW_IP6='2a00:5080:1:1c6::'		# autofallback to fe80::1
 
@@ -72,9 +76,11 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-A.pubkey; then
   wg set wg0 peer "$PUBKEY_OTHERSIDE" allowed-ips 0.0.0.0/0,::/0 endpoint "${IP4_SIDEA}:${WGPORT_SIDEA}"
   ip link set wg0 up
 
-  # e.g.: default via 10.0.2.2 dev ens3 proto dhcp src 10.0.2.15 metric 100
-  GW_IP="$( ip route list exact 0.0.0.0/0 | cut -d' ' -f3 )"	# e.g. 10.0.2.2
-  GWDEV="$( ip route list exact 0.0.0.0/0 | cut -d' ' -f5 )"	# e.g. ens3
+  while [ -z "$GW_IP" ]; do {
+    # e.g.: default via 10.0.2.2 dev ens3 proto dhcp src 10.0.2.15 metric 100
+    GW_IP="$( ip route list exact 0.0.0.0/0 | cut -d' ' -f3 )"	# e.g. 10.0.2.2
+    GWDEV="$( ip route list exact 0.0.0.0/0 | cut -d' ' -f5 )"	# e.g. ens3
+  } done
 
   # wait for tunnel
   while ! ping -c1 "$PRIVIP4_OTHERSIDE"; do sleep 1; done
