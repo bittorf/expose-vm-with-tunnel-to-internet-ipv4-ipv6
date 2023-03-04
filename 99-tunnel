@@ -69,7 +69,7 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-A.pubkey; then
   ip address add 192.168.10.2/24 dev wg0
   ip address add fc00::2/64 dev wg0
   wg set wg0 private-key /etc/wireguard/privatekey
-  wg set wg0 peer "$PUBKEY_OTHERSIDE" allowed-ips 192.168.10.0/24 endpoint "${IP4_SIDEA}:${WGPORT_SIDEA}"
+  wg set wg0 peer "$PUBKEY_OTHERSIDE" allowed-ips 0.0.0.0/0,::/0 endpoint "${IP4_SIDEA}:${WGPORT_SIDEA}"
   ip link set wg0 up
 
   # e.g.: default via 10.0.2.2 dev ens3 proto dhcp src 10.0.2.15 metric 100
