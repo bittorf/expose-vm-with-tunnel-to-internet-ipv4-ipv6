@@ -8,6 +8,13 @@ NOTUNNEL='10.63.0.0/16'
 
 if   arg_is 'ping'; then
   ping -c1 >/dev/null 2>/dev/null 192.168.10.1 || true
+elif arg_is 'update'; then
+  URL='https://raw.githubusercontent.com/bittorf/expose-vm-with-tunnel-to-internet-ipv4-ipv6/main/99-tunnel'
+  if   command -v 'wget' >/dev/null; then
+    wget -O "$0" "$URL"
+  elif command -v 'curl' >/dev/null; then
+    curl "$URL" >"$0"
+  fi
 elif arg_is 'setupA'; then
   cd /etc/wireguard && umask 077
   wg genkey > privatekey
