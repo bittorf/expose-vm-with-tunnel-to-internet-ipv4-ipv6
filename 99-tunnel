@@ -4,6 +4,7 @@ ARG="$1"
 arg_is() { case "$ARG" in "$1") true ;; *) false ;; esac; }
 
 WGPORT_SIDEA=12345
+NOTUNNEL='10.63.0.0/16'
 
 if   arg_is 'ping'; then
   ping -c1 >/dev/null 2>/dev/null 192.168.10.1 || true
@@ -85,8 +86,12 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-A.pubkey; then
   # wait for tunnel
   while ! ping -c1 "$PRIVIP4_OTHERSIDE"; do sleep 1; done
 
+  # these networks are directly attached or must be routed locally:
+  for NET in $PUBIP4_OTHERSIDE/32 $NOTUNNEL; do {
+    ip route add "$NET" via "$GW_IP" dev "$GWDEV"
+  } done
+
   ip route add   0.0.0.0/1 dev wg0
   ip route add 128.0.0.0/1 dev wg0
-  ip route add "$PUBIP4_OTHERSIDE/32" via "$GW_IP" dev "$GWDEV"
   ip -6 route add 2000::/3 via $PRIVIP6_OTHERSIDE dev wg0
 fi
