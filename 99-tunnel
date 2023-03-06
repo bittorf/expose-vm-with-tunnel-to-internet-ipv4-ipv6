@@ -19,6 +19,9 @@ elif arg_is 'setupA'; then
   cd /etc/wireguard && umask 077
   wg genkey > privatekey
   wg pubkey < privatekey > publickey
+  echo "Please enter TCP ports (e.g. 80 443) which should be forwarded to side-B: "
+  read -r PORTS_TCP
+  echo "$PORTS_TCP" >ports_tcp.txt
   echo "My public IP-address: $( wget -qO - http://eth0.me )"
   chmod 0600 ./*
   echo READY
@@ -69,6 +72,12 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
   ip -6 route   add 2000::/3 via $GW_IP6 dev "$DEV"
   sysctl net.ipv6.conf.all.forwarding=1
   ip6tables -t nat -I POSTROUTING -s fc00::/64 -j MASQUERADE
+
+  read -r LIST_PORTS </etc/wireguard/ports_tcp.txt
+  for PORT in $LIST_PORTS; do {
+    iptables  -t nat -I PREROUTING -i "$DEV" -p tcp --dport "$PORT" -j DNAT --to-destination 192.168.10.2
+    ip6tables -t nat -I PREROUTING -i "$DEV" -p tcp --dport "$PORT" -j DNAT --to-destination fc00::2
+  } done
 elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-A.pubkey; then
   echo 'working on Side-B'
 
