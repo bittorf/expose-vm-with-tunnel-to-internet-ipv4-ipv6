@@ -45,7 +45,8 @@ elif arg_is 'setupB'; then
   chmod 0600 ./*
   echo READY
 elif arg_is 'network-restart-B'; then
-  :
+  ip link set wg0 down
+  ip link set wg0 up
 elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
   echo 'working on Side-A'
 
