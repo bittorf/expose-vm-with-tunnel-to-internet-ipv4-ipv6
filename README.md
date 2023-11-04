@@ -1,7 +1,7 @@
 ### idea
 
 Use public IP-address (v4/v6) from host in datacenter  
-and tunnel explicit ports using wireguard into VM running anywhere.
+and tunnel explicit ports using wireguard into VM running anywhere (e.g. behind NAT).
 ```
 e.g.
                   SIDE A (IPv4 + IPv6)                           SIDE B
@@ -13,7 +13,7 @@ ToDo:
 https://github.com/anderspitman/awesome-tunneling
 
 
-### Step0: Side-B setup VM
+### Step0: Side-B setup VM (e.g. behind NAT)
 ```
 qemu-img create -f qcow2 test.img 16G
 URL=https://cdimage.debian.org/cdimage/weekly-builds/amd64/iso-cd/debian-testing-amd64-netinst.iso
