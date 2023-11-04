@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ARG="$1"
+ARG="$1"	# e.g. ping, update, setupA, setupB or <empty>
 arg_is() { case "$ARG" in "$1") true ;; *) false ;; esac; }
 
 WGPORT_SIDEA=12345
@@ -39,11 +39,13 @@ elif arg_is 'setupB'; then
   echo "Downloading wireguard-publickey from Side-A to /etc/wireguard/side-A.pubkey"
   scp "root@$IP:/etc/wireguard/publickey" /etc/wireguard/side-A.pubkey
   crontab -l | grep -q "$0 ping" || {
-    echo >cron "* * * * * $0 ping"
+    echo >cron "* * * * * $0 ping || $0 network-restart-B"
     crontab cron
   }
   chmod 0600 ./*
   echo READY
+elif arg_is 'network-restart-B'; then
+  :
 elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
   echo 'working on Side-A'
 
