@@ -7,7 +7,13 @@ WGPORT_SIDEA=12345
 NOTUNNEL='10.63.0.0/16'
 
 if   arg_is 'ping'; then
-  ping -c1 >/dev/null 2>/dev/null 192.168.10.1 || true
+  ping -c1 >/dev/null 2>/dev/null 192.168.10.1 || {
+    case "$( date +%M )" in 00|15|30|45)
+      read -r IP4_SIDEA </etc/wireguard/side-A.ip4
+      IP4_REAL="$( wget -qO - http://eth0.me || wget -qO - http://ifconfig.me )"
+      test "$IP4_REAL" = "$IP4_SIDEA"
+    esac
+  }
 elif arg_is 'update'; then
   URL='https://raw.githubusercontent.com/bittorf/expose-vm-with-tunnel-to-internet-ipv4-ipv6/main/99-tunnel'
   if   command -v 'wget' >/dev/null; then
@@ -47,6 +53,7 @@ elif arg_is 'setupB'; then
 elif arg_is 'network-restart-B'; then
   ip link set wg0 down
   ip link set wg0 up
+  "$0"
 elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
   echo 'working on Side-A'
 
