@@ -96,7 +96,7 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-A.pubkey; then
   PRIVIP6_OTHERSIDE="fc00::1"
 
   DEV="$( ip -oneline link | grep -v "LOOPBACK\|wg0:" | head -n1 | cut -d: -f2 )"
-  ip -oneline link show dev "$DEV" | grep -q "state UP" || dhclient $DEV
+  ip -oneline link show dev $DEV | grep -q 'state UP' || dhclient $DEV
 
   ip link add wg0 type wireguard
   ip address add 192.168.10.2/24 dev wg0
