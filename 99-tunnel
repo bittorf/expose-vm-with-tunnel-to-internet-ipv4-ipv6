@@ -6,7 +6,7 @@ arg_is() { case "$ARG" in "$1") true ;; *) false ;; esac; }
 WGPORT_SIDEA=12345
 NOTUNNEL='10.63.0.0/16'
 
-if   arg_is 'ping'; then
+if   arg_is 'ping'; then		# minutely cronjob on side-B
   case "$( date +%M )" in 00|15|30|45)
     read -r IP4_SIDEA </etc/wireguard/side-A.ip4
     IP4_REAL="$( wget -qO - http://eth0.me || wget -qO - http://ifconfig.me )"
@@ -102,11 +102,14 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-A.pubkey; then
   wg set wg0 peer "$PUBKEY_OTHERSIDE" allowed-ips 0.0.0.0/0,::/0 endpoint "${IP4_SIDEA}:${WGPORT_SIDEA}"
   ip link set wg0 up
 
-  while [ -z "$GW_IP" ]; do {
+  RETRY=4
+  while [ -z "$GW_IP" ] && [ "$RETRY" -gt 0 ]; do {
+    RETRY=$(( RETRY - 1 )) && sleep 5
     # e.g.: default via 10.0.2.2 dev ens3 proto dhcp src 10.0.2.15 metric 100
     GW_IP="$( ip route list exact 0.0.0.0/0 | cut -d' ' -f3 )"	# e.g. 10.0.2.2
     GWDEV="$( ip route list exact 0.0.0.0/0 | cut -d' ' -f5 )"	# e.g. ens3
   } done
+  test "$RETRY" = 0 && exit
 
   # wait for tunnel
   while ! ping -c1 "$PRIVIP4_OTHERSIDE"; do sleep 1; done
