@@ -1,7 +1,11 @@
 #!/bin/sh
+# shellcheck shell=dash
 
 ARG="$1"	# e.g. ping, update, setupA, setupB or <empty>
+
 arg_is() { case "$ARG" in "$1") true ;; *) false ;; esac; }
+http_get() { local url="$1"; if command -v wget >/dev/null; then wget -qO - "$url"; else curl -s "$url"; fi; }
+pubip_get() { http_get http://eth0.me || http_get http://ifconfig.me; }
 
 WGPORT_SIDEA=12345
 NOTUNNEL='10.63.0.0/16'
@@ -9,17 +13,13 @@ NOTUNNEL='10.63.0.0/16'
 if   arg_is 'ping'; then		# minutely cronjob on side-B
   case "$( date +%M )" in 00|15|30|45)
     read -r IP4_SIDEA </etc/wireguard/side-A.ip4
-    IP4_REAL="$( wget -qO - http://eth0.me || wget -qO - http://ifconfig.me )"
+    IP4_REAL="$( pubip_get )"
     test "$IP4_REAL" = "$IP4_SIDEA" ;;
     *) ping -c1 >/dev/null 2>/dev/null 192.168.10.1
   esac
 elif arg_is 'update'; then
   URL='https://raw.githubusercontent.com/bittorf/expose-vm-with-tunnel-to-internet-ipv4-ipv6/main/99-tunnel'
-  if   command -v 'wget' >/dev/null; then
-    wget -O "$0" "$URL"
-  elif command -v 'curl' >/dev/null; then
-    curl "$URL" >"$0"
-  fi
+  http_get "$URL" >"$0"
 elif arg_is 'setupA'; then
   cd /etc/wireguard && umask 077
   wg genkey > privatekey
@@ -29,8 +29,7 @@ elif arg_is 'setupA'; then
   read -r PORTS_TCP
   echo "$PORTS_TCP" >ports_tcp.txt
 
-  echo "My public IP-address: $( wget -qO - http://eth0.me )"
-
+  echo "My public IP-address: $( pubip_get )"
   chmod 0600 ./*
   echo READY
 elif arg_is 'setupB'; then
@@ -42,7 +41,7 @@ elif arg_is 'setupB'; then
   read -r IP
   echo "$IP" >/etc/wireguard/side-A.pubkey
 
-  for SSHPRIVKEY in ~/.ssh; do file -b "$SSHPRIVKEY" | grep -H "private key"; done
+  for SSHPRIVKEY in ~/.ssh/*; do file -b "$SSHPRIVKEY" | grep -H 'private key' || continue; done
   echo "Uploading SSH-publickey to root@$IP - please enter password"
   ssh-copy-id -i "$SSHPRIVKEY" "root@$IP"
 
