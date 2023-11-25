@@ -10,6 +10,7 @@ pubip_get() { http_get http://eth0.me || http_get http://ifconfig.me; }
 export IPX="-4"			# default is IPv4
 WGPORT_SIDEA=12345
 NOTUNNEL='10.63.0.0/16'
+DIR='/etc/wireguard'
 
 if arg_is 'ping'; then		# minutely cronjob on side-B
   case "$( date +%M )" in
@@ -25,7 +26,7 @@ elif arg_is 'update' || arg_is 'upgrade'; then
   TEMP="$( mktemp )" && http_get "$URL" >"$TEMP" && test -s "$TEMP" && sh -n "$TEMP" && cat "$TEMP" >"$0" && rm -f "$TEMP"
   exit $?
 elif arg_is 'setupA'; then
-  DIR='/etc/wireguard' && cd "$DIR" && umask 077
+  cd "$DIR" && umask 077
   test -s privatekey || \
   wg genkey > privatekey
   wg pubkey < privatekey > publickey
@@ -58,7 +59,7 @@ elif arg_is 'setupA'; then
   chmod 0600 ./*
   echo READY
 elif arg_is 'setupB'; then
-  DIR='/etc/wireguard' && cd "$DIR" && umask 077
+  cd "$DIR" && umask 077
   test -s privatekey || \
   wg genkey > privatekey
   wg pubkey < privatekey > publickey
@@ -111,9 +112,13 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
   sysctl net.ipv4.conf.all.rp_filter=0
   iptables -t nat -I POSTROUTING -s 192.168.10.0/24 -j MASQUERADE
 
+  read -r PUBIP6 <"$DIR/side-A.ip6"
   ip -6 address add "$PUBIP6/64"           dev "$DEV"
+
+  read -r GW_IP6 <"$DIR/side-A.ip6gw"
   ping -c3 "$GW_IP6" || GW_IP6='fe80::1'		# autofallback to fe80::1
   ip -6 route   add 2000::/3 via "$GW_IP6" dev "$DEV"
+
   sysctl net.ipv6.conf.all.forwarding=1
   ip6tables -t nat -I POSTROUTING -s fc00::/64 -j MASQUERADE
 
