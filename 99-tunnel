@@ -1,5 +1,6 @@
 #!/bin/sh
 # shellcheck shell=dash
+{
 
 ARG="$1"	# e.g. ping, update, upgrade, setupA, setupB or network-restart-B or <empty>
 
@@ -167,3 +168,5 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-A.pubkey; then
   ip -4 route add 128.0.0.0/1 dev wg0
   ip -6 route add 2000::/3 via $PRIVIP6_OTHERSIDE dev wg0
 fi
+
+}	# enclose all for easy overwrite during update
