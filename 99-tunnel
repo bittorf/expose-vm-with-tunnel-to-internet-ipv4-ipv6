@@ -24,6 +24,7 @@ elif arg_is 'update'; then
   TEMP="$( mktemp )" && http_get "$URL" >"$TEMP" && test -s "$TEMP" && sh -n "$TEMP" && cat "$TEMP" >"$0" && rm -f "$TEMP"
 elif arg_is 'setupA'; then
   cd /etc/wireguard && umask 077
+  test -s privatekey || \
   wg genkey > privatekey
   wg pubkey < privatekey > publickey
 
@@ -37,6 +38,7 @@ elif arg_is 'setupA'; then
   echo READY
 elif arg_is 'setupB'; then
   cd /etc/wireguard && umask 077
+  test -s privatekey || \
   wg genkey > privatekey
   wg pubkey < privatekey > publickey
 
