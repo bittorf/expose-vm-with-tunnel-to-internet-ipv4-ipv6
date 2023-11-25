@@ -45,7 +45,7 @@ elif arg_is 'setupB'; then
   read -r IP
   echo "$IP" >/etc/wireguard/side-A.pubip
 
-  for SSHPRIVKEY in ~/.ssh/*; do file -b "$SSHPRIVKEY" | grep -H 'private key' || continue; done
+  for SSHPRIVKEY in ~/.ssh/*; do file -b "$SSHPRIVKEY" | grep 'private key' && break; done
   echo "Uploading SSH-publickey to root@$IP - please enter password"
   ssh-copy-id -i "$SSHPRIVKEY" "root@$IP"
 
