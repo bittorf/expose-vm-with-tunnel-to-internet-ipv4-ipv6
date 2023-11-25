@@ -24,46 +24,49 @@ elif arg_is 'update'; then
   URL='https://raw.githubusercontent.com/bittorf/expose-vm-with-tunnel-to-internet-ipv4-ipv6/main/99-tunnel'
   TEMP="$( mktemp )" && http_get "$URL" >"$TEMP" && test -s "$TEMP" && sh -n "$TEMP" && cat "$TEMP" >"$0" && rm -f "$TEMP"
 elif arg_is 'setupA'; then
-  cd /etc/wireguard && umask 077
+  DIR='/etc/wireguard' && cd "$DIR" && umask 077
   test -s privatekey || \
   wg genkey > privatekey
   wg pubkey < privatekey > publickey
 
+  FILE="$DIR/side-A.ip6"
   echo "Please enter public IPv6-address from here: "
   echo "e.g. like: 2a00:5080:1:1c6::1 "
   echo "e.g. like: 2001:41d0:203:85e2::c6e5:10e "
   echo "trying to guess: $( IPX=-6 pubip_get )"
-  read -r PUBIP6_OLD 2>/dev/null </etc/wireguard/side-A.ip6 && echo "your settings: $PUBIP6_OLD (hit enter if OK)"
+  read -r PUBIP6_OLD 2>/dev/null <"$FILE" && echo "your settings: $PUBIP6_OLD (hit enter if OK)"
   read -r PUBIP6
-  echo "${PUBIP6:=$PUBIP6_OLD}"  >/etc/wireguard/side-A.ip6
+  echo "${PUBIP6:=$PUBIP6_OLD}"  >"$FILE" && echo "stored in: $FILE"
 
+  FILE="$DIR/side-A.ip6gw"
   echo "Please enter your IPv6 gateway address from here: "
   echo "e.g. like: 2a00:5080:1:1c6::"
   echo "e.g. like: 2001:41d0:203:85e2::"
   echo "trying to guess: $( ip -6 route get 2000::/3 | cut -d' ' -f5 | sed 's/::/:: /' | cut -d' ' -f1 )"
-  read -r GW_IP6_OLD 2>/dev/null </etc/wireguard/side-A.ip6gw && echo "your settings: $GW_IP6_OLD (hit enter if OK)"
+  read -r GW_IP6_OLD 2>/dev/null <"$FILE" && echo "your settings: $GW_IP6_OLD (hit enter if OK)"
   read -r GW_IP6
-  echo "${GW_IP6:=$GW_IP6_OLD}"  >/etc/wireguard/side-A.ip6gw
+  echo "${GW_IP6:=$GW_IP6_OLD}"  >"$FILE" && echo "stored in: $FILE"
 
-
+  FILE="$DIR/ports_tcp.txt"
   echo "Please enter TCP ports (e.g. 80 443) which should be forwarded to side-B: "
-  read -r PORTS_TCP_OLD 2>/dev/null   <ports_tcp.txt && echo "your settings: $PORTS_TCP_OLD (hit enter if OK)"
+  read -r PORTS_TCP_OLD 2>/dev/null   <"$FILE" && echo "your settings: $PORTS_TCP_OLD (hit enter if OK)"
   read -r PORTS_TCP
-  echo "${PORTS_TCP:=$PORTS_TCP_OLD}" >ports_tcp.txt
+  echo "${PORTS_TCP:=$PORTS_TCP_OLD}" >"$FILE" && echo "stored in: $FILE"
 
-  echo "My public IP-address: $( pubip_get )"
+  echo "My public IPv4-address is: $( pubip_get )"
   chmod 0600 ./*
   echo READY
 elif arg_is 'setupB'; then
-  cd /etc/wireguard && umask 077
+  DIR='/etc/wireguard' && cd "$DIR" && umask 077
   test -s privatekey || \
   wg genkey > privatekey
   wg pubkey < privatekey > publickey
 
+  FILE="$DIR/side-A.ip4"
   echo "Please enter public IP-address of side-A: "
-  read -r IP_OLD 2>/dev/null </etc/wireguard/side-A.ip4 && echo "your settings: $IP_OLD (hit enter if OK)"
+  read -r IP_OLD 2>/dev/null <"$FILE" && echo "your settings: $IP_OLD (hit enter if OK)"
   read -r IP
-  echo "${IP:=$IP_OLD}"      >/etc/wireguard/side-A.ip4
+  echo "${IP:=$IP_OLD}"      >"$FILE" && echo "stored in: $FILE"
 
   for SSHPRIVKEY in ~/.ssh/*; do file -b "$SSHPRIVKEY" | grep 'private key' && break; done
   echo "Uploading SSH-publickey to root@$IP using SSH-identity '$SSHPRIVKEY' - please enter password"
