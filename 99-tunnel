@@ -1,7 +1,7 @@
 #!/bin/sh
 # shellcheck shell=dash
 
-ARG="$1"	# e.g. ping, update, setupA, setupB or <empty>
+ARG="$1"	# e.g. ping, update, upgrade, setupA, setupB or network-restart-B or <empty>
 
 arg_is() { case "$ARG" in "$1") true ;; *) false ;; esac; }
 http_get() { local url="$1"; if command -v wget >/dev/null; then wget "$IPX" -qO - "$url"; else curl "$IPX" -s "$url"; fi; }
@@ -20,9 +20,10 @@ if arg_is 'ping'; then		# minutely cronjob on side-B
     ;;
     *) ping -c1 >/dev/null 2>/dev/null 192.168.10.1	# keep the contact by having traffic in tunnel
   esac
-elif arg_is 'update'; then
+elif arg_is 'update' || arg_is 'upgrade'; then
   URL='https://raw.githubusercontent.com/bittorf/expose-vm-with-tunnel-to-internet-ipv4-ipv6/main/99-tunnel'
   TEMP="$( mktemp )" && http_get "$URL" >"$TEMP" && test -s "$TEMP" && sh -n "$TEMP" && cat "$TEMP" >"$0" && rm -f "$TEMP"
+  exit $?
 elif arg_is 'setupA'; then
   DIR='/etc/wireguard' && cd "$DIR" && umask 077
   test -s privatekey || \
