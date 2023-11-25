@@ -4,9 +4,10 @@
 ARG="$1"	# e.g. ping, update, setupA, setupB or <empty>
 
 arg_is() { case "$ARG" in "$1") true ;; *) false ;; esac; }
-http_get() { local url="$1"; if command -v wget >/dev/null; then wget -4 -qO - "$url"; else curl -4 -s "$url"; fi; }
+http_get() { local url="$1"; if command -v wget >/dev/null; then wget "$IPX" -qO - "$url"; else curl "$IPX" -s "$url"; fi; }
 pubip_get() { http_get http://eth0.me || http_get http://ifconfig.me; }
 
+export IPX="-4"			# default is IPv4
 WGPORT_SIDEA=12345
 NOTUNNEL='10.63.0.0/16'
 
@@ -27,6 +28,23 @@ elif arg_is 'setupA'; then
   test -s privatekey || \
   wg genkey > privatekey
   wg pubkey < privatekey > publickey
+
+  echo "Please enter public IPv6-address from here: "
+  echo "e.g. like: 2a00:5080:1:1c6::1 "
+  echo "e.g. like: 2001:41d0:203:85e2::c6e5:10e "
+  echo "trying to guess: $( IPX=-6 pubip_get )"
+  read -r PUBIP6_OLD 2>/dev/null </etc/wireguard/side-A.ip6 && echo "your settings: $PUBIP6_OLD (hit enter if OK)"
+  read -r PUBIP6
+  echo "${PUBIP6:=$PUBIP6_OLD}"  >/etc/wireguard/side-A.ip6
+
+  echo "Please enter your IPv6 gateway address from here: "
+  echo "e.g. like: 2a00:5080:1:1c6::"
+  echo "e.g. like: 2001:41d0:203:85e2::"
+  echo "trying to guess: $( ip -6 route get 2000::/3 | cut -d' ' -f5 | sed 's/::/:: /' | cut -d' ' -f1 )"
+  read -r GW_IP6_OLD 2>/dev/null </etc/wireguard/side-A.ip6gw && echo "your settings: $GW_IP6_OLD (hit enter if OK)"
+  read -r GW_IP6
+  echo "${GW_IP6:=$GW_IP6_OLD}"  >/etc/wireguard/side-A.ip6gw
+
 
   echo "Please enter TCP ports (e.g. 80 443) which should be forwarded to side-B: "
   read -r PORTS_TCP_OLD 2>/dev/null   <ports_tcp.txt && echo "your settings: $PORTS_TCP_OLD (hit enter if OK)"
@@ -76,9 +94,6 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
     DEV="$( ip route list exact 0.0.0.0/0 | cut -d' ' -f5 )"	# e.g. ens3
   } done
 
-  PUBIP6='2a00:5080:1:1c6::1'
-  GW_IP6='2a00:5080:1:1c6::'		# autofallback to fe80::1
-
   ip link add wg0 type wireguard
   ip address add 192.168.10.1/24 dev wg0
   ip address add      fc00::1/64 dev wg0
@@ -92,8 +107,8 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
   sysctl net.ipv4.conf.all.rp_filter=0
   iptables -t nat -I POSTROUTING -s 192.168.10.0/24 -j MASQUERADE
 
-  ping -c1 "$GW_IP6" || GW_IP6='fe80::1'
-  ip -6 address add $PUBIP6/64   dev "$DEV"
+  ip -6 address add $PUBIP6/64           dev "$DEV"
+  ping -c3 "$GW_IP6" || GW_IP6='fe80::1'		# autofallback to fe80::1
   ip -6 route   add 2000::/3 via $GW_IP6 dev "$DEV"
   sysctl net.ipv6.conf.all.forwarding=1
   ip6tables -t nat -I POSTROUTING -s fc00::/64 -j MASQUERADE
