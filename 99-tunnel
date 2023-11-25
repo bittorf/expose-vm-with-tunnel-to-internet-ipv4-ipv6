@@ -43,11 +43,11 @@ elif arg_is 'setupB'; then
   echo "Please enter public IP-address of side-A: "
   read -r IP_OLD 2>/dev/null </etc/wireguard/side-A.pubip && echo "your settings: $IP_OLD (hit enter if OK)"
   read -r IP
-  echo      "${IP:-$OLD_IP}" >/etc/wireguard/side-A.pubip
+  echo "${IP:+$OLD_IP}"      >/etc/wireguard/side-A.pubip
 
   for SSHPRIVKEY in ~/.ssh/*; do file -b "$SSHPRIVKEY" | grep 'private key' && break; done
-  echo "Uploading SSH-publickey to root@$IP - please enter password"
-  ssh-copy-id -i "$SSHPRIVKEY" "root@$IP"
+  echo "Uploading SSH-publickey to root@$IP using SSH-identity '$SSHPRIVKEY' - please enter password"
+  ssh-copy-id -i "$SSHPRIVKEY" "root@$IP" || exit 1
 
   echo "Uploading my wireguard-publickey to root@$IP:/etc/wireguard/side-B.pubkey"
   scp publickey "root@$IP:/etc/wireguard/side-B.pubkey"
