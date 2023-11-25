@@ -16,7 +16,7 @@ DIR='/etc/wireguard'
 if arg_is 'ping'; then		# minutely cronjob on side-B
   case "$( date +%M )" in
     00|15|30|45)
-      read -r IP4_SIDEA </etc/wireguard/side-A.ip4
+      read -r IP4_SIDEA <"$DIR/side-A.ip4"
       IP4_REAL="$( pubip_get )"
       test "$IP4_REAL" = "$IP4_SIDEA"			# if this fails the cronjob restarts the network
     ;;
@@ -75,11 +75,11 @@ elif arg_is 'setupB'; then
   echo && echo "Uploading SSH-publickey to root@$IP using SSH-identity '$SSHPRIVKEY' - please enter password"
   ssh-copy-id -i "$SSHPRIVKEY" "root@$IP" || exit 1
 
-  echo && echo "Uploading my wireguard-publickey to root@$IP:/etc/wireguard/side-B.pubkey"
-  scp -i "$SSHPRIVKEY" publickey "root@$IP:/etc/wireguard/side-B.pubkey"
+  echo && echo "Uploading my wireguard-publickey to root@$IP:$DIR/side-B.pubkey"
+  scp -i "$SSHPRIVKEY" publickey "root@$IP:$DIR/side-B.pubkey"
 
-  echo && echo "Downloading wireguard-publickey from Side-A to /etc/wireguard/side-A.pubkey"
-  scp -i "$SSHPRIVKEY" "root@$IP:/etc/wireguard/publickey" /etc/wireguard/side-A.pubkey
+  echo && echo "Downloading wireguard-publickey from Side-A to $DIR/side-A.pubkey"
+  scp -i "$SSHPRIVKEY" "root@$IP:$DIR/publickey" "$DIR/side-A.pubkey"
 
   crontab -l | grep -q "$0 ping" || {
     echo >cron "* * * * * $0 ping || $0 network-restart-B"
@@ -92,7 +92,7 @@ elif arg_is 'network-restart-B'; then
   ip link set wg0 down
   ip link set wg0 up
   "$0"
-elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
+elif read -r PUBKEY_OTHERSIDE 2>/dev/null <"$DIR/side-B.pubkey"; then
   echo 'working on Side-A'
 
   while [ -z "$DEV" ]; do {
@@ -104,7 +104,7 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
   ip address add 192.168.10.1/24 dev wg0
   ip address add      fc00::1/64 dev wg0
 
-  wg set wg0 private-key /etc/wireguard/privatekey
+  wg set wg0 private-key "$DIR/privatekey"
   wg set wg0 listen-port $WGPORT_SIDEA
   wg set wg0 peer "$PUBKEY_OTHERSIDE" allowed-ips 0.0.0.0/0,::/0
   ip link set wg0 up
@@ -123,15 +123,15 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
   sysctl net.ipv6.conf.all.forwarding=1
   ip6tables -t nat -I POSTROUTING -s fc00::/64 -j MASQUERADE
 
-  read -r LIST_PORTS </etc/wireguard/ports_tcp.txt
+  read -r LIST_PORTS <"$DIR/ports_tcp.txt"
   for PORT in $LIST_PORTS; do {
     iptables  -t nat -I PREROUTING -i "$DEV" -p tcp --dport "$PORT" -j DNAT --to-destination 192.168.10.2
     ip6tables -t nat -I PREROUTING -i "$DEV" -p tcp --dport "$PORT" -j DNAT --to-destination fc00::2
   } done
-elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-A.pubkey; then
+elif read -r PUBKEY_OTHERSIDE 2>/dev/null <"$DIR/side-A.pubkey"; then
   echo 'working on Side-B'
 
-  read -r IP4_SIDEA </etc/wireguard/side-A.ip4
+  read -r IP4_SIDEA <"$DIR/side-A.ip4"
   PUBIP4_OTHERSIDE="$IP4_SIDEA"
   PRIVIP4_OTHERSIDE="192.168.10.1"
   PRIVIP6_OTHERSIDE="fc00::1"
@@ -143,7 +143,7 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-A.pubkey; then
   ip address add 192.168.10.2/24 dev wg0
   ip address add      fc00::2/64 dev wg0
 
-  wg set wg0 private-key /etc/wireguard/privatekey
+  wg set wg0 private-key "$DIR/privatekey"
   wg set wg0 peer "$PUBKEY_OTHERSIDE" allowed-ips 0.0.0.0/0,::/0 endpoint "${IP4_SIDEA}:${WGPORT_SIDEA}"
   ip link set wg0 up
 
