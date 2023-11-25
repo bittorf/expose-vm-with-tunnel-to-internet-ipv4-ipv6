@@ -4,18 +4,20 @@
 ARG="$1"	# e.g. ping, update, setupA, setupB or <empty>
 
 arg_is() { case "$ARG" in "$1") true ;; *) false ;; esac; }
-http_get() { local url="$1"; if command -v wget >/dev/null; then wget -qO - "$url"; else curl -s "$url"; fi; }
+http_get() { local url="$1"; if command -v wget >/dev/null; then wget -4 -qO - "$url"; else curl -4 -s "$url"; fi; }
 pubip_get() { http_get http://eth0.me || http_get http://ifconfig.me; }
 
 WGPORT_SIDEA=12345
 NOTUNNEL='10.63.0.0/16'
 
-if   arg_is 'ping'; then		# minutely cronjob on side-B
-  case "$( date +%M )" in 00|15|30|45)
-    read -r IP4_SIDEA </etc/wireguard/side-A.ip4
-    IP4_REAL="$( pubip_get )"
-    test "$IP4_REAL" = "$IP4_SIDEA" ;;
-    *) ping -c1 >/dev/null 2>/dev/null 192.168.10.1
+if arg_is 'ping'; then		# minutely cronjob on side-B
+  case "$( date +%M )" in
+    00|15|30|45)
+      read -r IP4_SIDEA </etc/wireguard/side-A.ip4
+      IP4_REAL="$( pubip_get )"
+      test "$IP4_REAL" = "$IP4_SIDEA"			# if this fails the cronjob restarts the network
+    ;;
+    *) ping -c1 >/dev/null 2>/dev/null 192.168.10.1	# keep the contact by having traffic in tunnel
   esac
 elif arg_is 'update'; then
   URL='https://raw.githubusercontent.com/bittorf/expose-vm-with-tunnel-to-internet-ipv4-ipv6/main/99-tunnel'
@@ -75,7 +77,8 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-B.pubkey; then
 
   ip link add wg0 type wireguard
   ip address add 192.168.10.1/24 dev wg0
-  ip address add fc00::1/64 dev wg0
+  ip address add      fc00::1/64 dev wg0
+
   wg set wg0 private-key /etc/wireguard/privatekey
   wg set wg0 listen-port $WGPORT_SIDEA
   wg set wg0 peer "$PUBKEY_OTHERSIDE" allowed-ips 0.0.0.0/0,::/0
@@ -107,9 +110,10 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-A.pubkey; then
   for DEV in $( ip -oneline link | grep -v "LOOPBACK\|wg0:" | head -n1 | cut -d: -f2 ); do :; done
   ip -oneline link show dev "$DEV" | grep -q 'state UP' || dhclient "$DEV"
 
-  ip link add wg0 type wireguard
+  ip link    add wg0 type wireguard
   ip address add 192.168.10.2/24 dev wg0
-  ip address add fc00::2/64 dev wg0
+  ip address add      fc00::2/64 dev wg0
+
   wg set wg0 private-key /etc/wireguard/privatekey
   wg set wg0 peer "$PUBKEY_OTHERSIDE" allowed-ips 0.0.0.0/0,::/0 endpoint "${IP4_SIDEA}:${WGPORT_SIDEA}"
   ip link set wg0 up
@@ -131,7 +135,7 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null </etc/wireguard/side-A.pubkey; then
     ip route add "$NET" via "$GW_IP" dev "$GWDEV"
   } done
 
-  ip route add   0.0.0.0/1 dev wg0
-  ip route add 128.0.0.0/1 dev wg0
+  ip -4 route add   0.0.0.0/1 dev wg0
+  ip -4 route add 128.0.0.0/1 dev wg0
   ip -6 route add 2000::/3 via $PRIVIP6_OTHERSIDE dev wg0
 fi
