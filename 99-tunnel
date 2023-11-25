@@ -21,7 +21,7 @@ if arg_is 'ping'; then		# minutely cronjob on side-B
   esac
 elif arg_is 'update'; then
   URL='https://raw.githubusercontent.com/bittorf/expose-vm-with-tunnel-to-internet-ipv4-ipv6/main/99-tunnel'
-  TEMP="$( mktemp )" && http_get "$URL" >"$TEMP" && cat "$TEMP" >"$0" && rm -f "$TEMP"
+  TEMP="$( mktemp )" && http_get "$URL" >"$TEMP" && test -s "$TEMP" && sh -n "$TEMP" && cat "$TEMP" >"$0" && rm -f "$TEMP"
 elif arg_is 'setupA'; then
   cd /etc/wireguard && umask 077
   wg genkey > privatekey
