@@ -37,7 +37,7 @@ elif arg_is 'setupA'; then
   echo "trying to guess: $( IPX=-6 pubip_get )"
   read -r PUBIP6_OLD 2>/dev/null <"$FILE" && echo "your settings: $PUBIP6_OLD (hit enter if OK)"
   read -r PUBIP6
-  echo "${PUBIP6:=$PUBIP6_OLD}"  >"$FILE" && echo "stored in: $FILE"
+  echo "${PUBIP6:=$PUBIP6_OLD}"  >"$FILE" && echo "stored in: $FILE" && echo
 
   FILE="$DIR/side-A.ip6gw"
   echo "Please enter your IPv6 gateway address from here: "
@@ -46,13 +46,13 @@ elif arg_is 'setupA'; then
   echo "trying to guess: $( ip -6 route get 2000::/3 | cut -d' ' -f5 | sed 's/::/:: /' | cut -d' ' -f1 )"
   read -r GW_IP6_OLD 2>/dev/null <"$FILE" && echo "your settings: $GW_IP6_OLD (hit enter if OK)"
   read -r GW_IP6
-  echo "${GW_IP6:=$GW_IP6_OLD}"  >"$FILE" && echo "stored in: $FILE"
+  echo "${GW_IP6:=$GW_IP6_OLD}"  >"$FILE" && echo "stored in: $FILE" && echo
 
   FILE="$DIR/ports_tcp.txt"
   echo "Please enter TCP ports (e.g. 80 443) which should be forwarded to side-B: "
   read -r PORTS_TCP_OLD 2>/dev/null   <"$FILE" && echo "your settings: $PORTS_TCP_OLD (hit enter if OK)"
   read -r PORTS_TCP
-  echo "${PORTS_TCP:=$PORTS_TCP_OLD}" >"$FILE" && echo "stored in: $FILE"
+  echo "${PORTS_TCP:=$PORTS_TCP_OLD}" >"$FILE" && echo "stored in: $FILE" && echo
 
   echo "My public IPv4-address is: $( pubip_get )"
   chmod 0600 ./*
@@ -70,13 +70,13 @@ elif arg_is 'setupB'; then
   echo "${IP:=$IP_OLD}"      >"$FILE" && echo "stored in: $FILE"
 
   for SSHPRIVKEY in ~/.ssh/*; do file -b "$SSHPRIVKEY" | grep 'private key' && break; done
-  echo "Uploading SSH-publickey to root@$IP using SSH-identity '$SSHPRIVKEY' - please enter password"
+  echo && echo "Uploading SSH-publickey to root@$IP using SSH-identity '$SSHPRIVKEY' - please enter password"
   ssh-copy-id -i "$SSHPRIVKEY" "root@$IP" || exit 1
 
-  echo "Uploading my wireguard-publickey to root@$IP:/etc/wireguard/side-B.pubkey"
+  echo && echo "Uploading my wireguard-publickey to root@$IP:/etc/wireguard/side-B.pubkey"
   scp -i "$SSHPRIVKEY" publickey "root@$IP:/etc/wireguard/side-B.pubkey"
 
-  echo "Downloading wireguard-publickey from Side-A to /etc/wireguard/side-A.pubkey"
+  echo && echo "Downloading wireguard-publickey from Side-A to /etc/wireguard/side-A.pubkey"
   scp -i "$SSHPRIVKEY" "root@$IP:/etc/wireguard/publickey" /etc/wireguard/side-A.pubkey
 
   crontab -l | grep -q "$0 ping" || {
