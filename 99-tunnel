@@ -30,7 +30,7 @@ elif arg_is 'setupA'; then
   echo "Please enter TCP ports (e.g. 80 443) which should be forwarded to side-B: "
   read -r PORTS_TCP_OLD 2>/dev/null   <ports_tcp.txt && echo "your settings: $PORTS_TCP_OLD (hit enter if OK)"
   read -r PORTS_TCP
-  echo "${PORTS_TCP:-$PORTS_TCP_OLD}" >ports_tcp.txt
+  echo "${PORTS_TCP:=$PORTS_TCP_OLD}" >ports_tcp.txt
 
   echo "My public IP-address: $( pubip_get )"
   chmod 0600 ./*
@@ -43,7 +43,7 @@ elif arg_is 'setupB'; then
   echo "Please enter public IP-address of side-A: "
   read -r IP_OLD 2>/dev/null </etc/wireguard/side-A.pubip && echo "your settings: $IP_OLD (hit enter if OK)"
   read -r IP
-  echo "${IP:+$OLD_IP}"      >/etc/wireguard/side-A.pubip
+  echo "${IP:=$IP_OLD}"      >/etc/wireguard/side-A.pubip
 
   for SSHPRIVKEY in ~/.ssh/*; do file -b "$SSHPRIVKEY" | grep 'private key' && break; done
   echo "Uploading SSH-publickey to root@$IP using SSH-identity '$SSHPRIVKEY' - please enter password"
