@@ -11,7 +11,7 @@ pubip_get() { http_get http://eth0.me || http_get http://ifconfig.me; }
 export IPX="-4"			# default is IPv4
 WGPORT_SIDEA=12345
 NOTUNNEL='10.63.0.0/16'
-DIR='/etc/wireguard'
+DIR='/etc/wireguard'		# FIXME: IPv6 mask is hardcoded to /64
 
 if arg_is 'ping'; then		# minutely cronjob on side-B
   case "$( date +%M )" in
@@ -66,7 +66,7 @@ elif arg_is 'setupB'; then
   wg pubkey < privatekey > publickey
 
   FILE="$DIR/side-A.ip4"
-  echo "Please enter public IP-address of side-A: "
+  echo "Please enter public IPv4-address of side-A: "
   read -r IP_OLD 2>/dev/null <"$FILE" && echo "your settings: $IP_OLD (hit enter if OK)"
   read -r IP
   echo "${IP:=$IP_OLD}"      >"$FILE" && echo "stored in: $FILE"
@@ -80,6 +80,9 @@ elif arg_is 'setupB'; then
 
   echo && echo "Downloading wireguard-publickey from Side-A to $DIR/side-A.pubkey"
   scp -i "$SSHPRIVKEY" "root@$IP:$DIR/publickey" "$DIR/side-A.pubkey"
+
+  echo && echo "Downloading public IPv6-address from Side-A to $DIR/side-A.ip6"
+  scp -i "$SSHPRIVKEY" "root@$IP:$DIR/side-A.ip6" "$DIR/side-A.ip6"
 
   crontab -l | grep -q "$0 ping" || {
     echo >cron "* * * * * $0 ping || $0 network-restart-B"
@@ -133,11 +136,18 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null <"$DIR/side-A.pubkey"; then
 
   read -r IP4_SIDEA <"$DIR/side-A.ip4"
   PUBIP4_OTHERSIDE="$IP4_SIDEA"
+
+  read -r IP6_SIDEA <"$DIR/side-A.ip6"
+  PUBIP6_OTHERSIDE="$IP6_SIDEA"
+
   PRIVIP4_OTHERSIDE="192.168.10.1"
   PRIVIP6_OTHERSIDE="fc00::1"
 
   for DEV in $( ip -oneline link | grep -v "LOOPBACK\|wg0:" | head -n1 | cut -d: -f2 ); do :; done
   ip -oneline link show dev "$DEV" | grep -q 'state UP' || dhclient "$DEV"
+
+  # so we can reach/test the services - FIXME: redirect only single ports?
+  ip address add "$PUBIP6_OTHERSIDE/64" dev "$DEV"
 
   ip link    add wg0 type wireguard
   ip address add 192.168.10.2/24 dev wg0
