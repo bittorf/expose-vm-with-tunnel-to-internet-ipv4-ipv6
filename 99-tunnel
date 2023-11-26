@@ -71,7 +71,9 @@ elif arg_is 'setupB'; then
   read -r IP
   echo "${IP:=$IP_OLD}"      >"$FILE" && echo "stored in: $FILE"
 
-  for SSHPRIVKEY in ~/.ssh/*; do file -b "$SSHPRIVKEY" | grep 'private key' && break; done
+  for FILE in ~/.ssh/*; do file -b "$FILE" | grep 'private key' && SSHPRIVKEY="$FILE" && break; done
+  test -f "$SSHPRIVKEY" || { echo "no SSH-identity found, please run e.g. ssh-keygen -t rsa -b 2048"; exit 1; }
+
   echo && echo "Uploading SSH-publickey to root@$IP using SSH-identity '$SSHPRIVKEY' - please enter password"
   ssh-copy-id -i "$SSHPRIVKEY" "root@$IP" || exit 1
 
