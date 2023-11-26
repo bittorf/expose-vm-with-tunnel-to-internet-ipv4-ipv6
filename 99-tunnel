@@ -45,10 +45,12 @@ elif arg_is 'setupA'; then
   echo "Please enter your IPv6 gateway address from here: "
   echo "e.g. like: 2a00:5080:1:1c6::"
   echo "e.g. like: 2001:41d0:203:85e2::"
-  echo "trying to guess: $( ip -6 route get 2000::/3 | cut -d' ' -f5 | sed 's/::/:: /' | cut -d' ' -f1 )"
+  echo "e.g. like: fe80::1"
+  echo "trying to guess: $( ip -6 route get 2000::/128 | cut -d' ' -f5 | sed 's/::/:: /' | cut -d' ' -f1 )"
   read -r GW_IP6_OLD 2>/dev/null <"$FILE" && echo "your settings: $GW_IP6_OLD (hit enter if OK)"
   read -r GW_IP6
   echo "${GW_IP6:=$GW_IP6_OLD}"  >"$FILE" && echo "stored in: $FILE" && echo
+  ping6 -c1 "$GW_IP6" >/dev/null || { echo "wrong IPv6 gateway? can not ping '$GW_IP6'"; exit 1; }
 
   FILE="$DIR/ports_tcp.txt"
   echo "Please enter TCP ports (e.g. 80 443) which should be forwarded to side-B: "
