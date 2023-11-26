@@ -27,6 +27,8 @@ elif arg_is 'update' || arg_is 'upgrade'; then
   TEMP="$( mktemp )" && http_get "$URL" >"$TEMP" && test -s "$TEMP" && sh -n "$TEMP" && cat "$TEMP" >"$0" && rm -f "$TEMP"
   exit $?
 elif arg_is 'setupA'; then
+  command -v 'wg' >/dev/null || { echo 'please install wireguard'; exit 1; }
+
   cd "$DIR" && umask 077
   test -s privatekey || \
   wg genkey > privatekey
@@ -62,6 +64,8 @@ elif arg_is 'setupA'; then
   chmod 0600 ./*
   echo READY
 elif arg_is 'setupB'; then
+  command -v 'wg' >/dev/null || { echo 'please install wireguard'; exit 1; }
+
   cd "$DIR" && umask 077
   test -s privatekey || \
   wg genkey > privatekey
