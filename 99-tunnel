@@ -138,6 +138,9 @@ elif read -r PUBKEY_OTHERSIDE 2>/dev/null <"$DIR/side-B.pubkey"; then
   for PORT in $LIST_PORTS; do {
     iptables  -t nat -I PREROUTING -i "$DEV" -p tcp --dport "$PORT" -j DNAT --to-destination 192.168.10.2
     ip6tables -t nat -I PREROUTING -i "$DEV" -p tcp --dport "$PORT" -j DNAT --to-destination fc00::2
+    [ "$PORT" = 53 ] || continue
+    iptables  -t nat -I PREROUTING -i "$DEV" -p udp --dport "$PORT" -j DNAT --to-destination 192.168.10.2
+    ip6tables -t nat -I PREROUTING -i "$DEV" -p udp --dport "$PORT" -j DNAT --to-destination fc00::2
   } done
 elif read -r PUBKEY_OTHERSIDE 2>/dev/null <"$DIR/side-A.pubkey"; then
   echo 'working on Side-B'
