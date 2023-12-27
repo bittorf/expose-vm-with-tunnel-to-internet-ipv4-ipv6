@@ -65,10 +65,14 @@ elif arg_is 'setupA'; then
   read -r PORTS_TCP
   echo "${PORTS_TCP:=$PORTS_TCP_OLD}" >"$FILE" && echo "stored in: $FILE" && echo
 
-  crontab -l | grep -q "$0 ping6" || {
+  if crontab -l | grep -q "$0 ping6"; then
+    echo "# crontab already active:"
+  else
     echo >cron "*/5 * * * * $0 ping6 || reboot"
     crontab cron
-  }
+    echo "# crontab added:"
+  fi
+  crontab -l | grep "$0 ping6"
 
   echo "My public IPv4-address is: $( pubip_get )"
   chmod 0600 ./*
@@ -102,10 +106,14 @@ elif arg_is 'setupB'; then
   echo && echo "Downloading public IPv6-address from Side-A to $DIR/side-A.ip6"
   scp -i "$SSHPRIVKEY" "root@$IP:$DIR/side-A.ip6" "$DIR/side-A.ip6"
 
-  crontab -l | grep -q "$0 ping" || {
+  if crontab -l | grep -q "$0 ping"; then
+    echo "[OK] crontab already active:"
+  else
     echo >cron "* * * * * $0 ping || $0 network-restart-B"
     crontab cron
-  }
+    echo "# crontab added:"
+  fi
+  crontab -l | grep "$0 ping"
 
   chmod 0600 ./*
   echo READY
