@@ -2,7 +2,7 @@
 # shellcheck shell=dash
 {
 
-ARG="$1"	# e.g. ping, ping6, update, upgrade, setupA, setupB or network-restart-B or <empty>
+ARG="$1"	# e.g. help, ping, ping6, update, upgrade, setupA, setupB or network-restart-B or <empty>
 
 arg_is() { case "$ARG" in "$1") true ;; *) false ;; esac; }
 http_get() { local url="$1"; if command -v wget >/dev/null; then wget "$IPX" -qO - "$url"; else curl "$IPX" -s "$url"; fi; }
@@ -13,7 +13,10 @@ WGPORT_SIDEA=12345
 NOTUNNEL='10.63.0.0/16'
 DIR='/etc/wireguard'		# FIXME: IPv6 mask is hardcoded to /64
 
-if arg_is 'ping'; then		# minutely cronjob on side-B
+if arg_is 'help'; then
+  echo "Usage: $0 <ping|ping6|update|upgrade|setupA|setupB|network-restart-B|<empty>"
+  exit 1
+elif arg_is 'ping'; then	# minutely cronjob on side-B
   case "$( date +%M )" in
     00|15|30|45)
       read -r IP4_SIDEA <"$DIR/side-A.ip4"
