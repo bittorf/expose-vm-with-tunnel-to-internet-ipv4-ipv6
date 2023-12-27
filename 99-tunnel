@@ -2,7 +2,7 @@
 # shellcheck shell=dash
 {
 
-ARG="$1"	# e.g. ping, update, upgrade, setupA, setupB or network-restart-B or <empty>
+ARG="$1"	# e.g. ping, ping6, update, upgrade, setupA, setupB or network-restart-B or <empty>
 
 arg_is() { case "$ARG" in "$1") true ;; *) false ;; esac; }
 http_get() { local url="$1"; if command -v wget >/dev/null; then wget "$IPX" -qO - "$url"; else curl "$IPX" -s "$url"; fi; }
@@ -22,6 +22,11 @@ if arg_is 'ping'; then		# minutely cronjob on side-B
     ;;
     *) ping -c1 >/dev/null 2>/dev/null 192.168.10.1	# keep the contact by having traffic in tunnel
   esac
+elif arg_is 'ping6'; then
+  for HOST in heise.de cloudflare.com google.com microsoft.com; do {
+    ERROR=true && ping6 -c1 "$HOST" >/dev/null 2>/dev/null && ERROR= && break
+  } done
+  test -z "$ERROR"
 elif arg_is 'update' || arg_is 'upgrade'; then
   URL='https://raw.githubusercontent.com/bittorf/expose-vm-with-tunnel-to-internet-ipv4-ipv6/main/99-tunnel'
   TEMP="$( mktemp )" && http_get "$URL" >"$TEMP" && test -s "$TEMP" && sh -n "$TEMP" && cat "$TEMP" >"$0" && echo UPGRADE-OK && rm -f "$TEMP"
@@ -59,6 +64,11 @@ elif arg_is 'setupA'; then
   read -r PORTS_TCP_OLD 2>/dev/null   <"$FILE" && echo "your settings: $PORTS_TCP_OLD (hit enter if OK)"
   read -r PORTS_TCP
   echo "${PORTS_TCP:=$PORTS_TCP_OLD}" >"$FILE" && echo "stored in: $FILE" && echo
+
+  crontab -l | grep -q "$0 ping6" || {
+    echo >cron "*/5 * * * * $0 ping6 || reboot"
+    crontab cron
+  }
 
   echo "My public IPv4-address is: $( pubip_get )"
   chmod 0600 ./*
