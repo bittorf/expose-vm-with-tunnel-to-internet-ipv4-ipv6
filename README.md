@@ -9,9 +9,6 @@ e.g.
 TCP-22/80/443 ===> host in datacenter <=== wireguard ===> VM running anywhere |
                  +--------------------+                 +---------------------+
 ```
-ToDo:  
-https://github.com/anderspitman/awesome-tunneling
-
 
 ### Step0: Side-B (e.g. behind NAT) setup a VM which supports wireguard
 ```
@@ -38,3 +35,6 @@ mkdir -p /etc/boot.d && cd /etc/boot.d
 URL="https://raw.githubusercontent.com/bittorf/expose-vm-with-tunnel-to-internet-ipv4-ipv6/main/99-tunnel"
 wget "$URL" && chmod +x 99-tunnel && /etc/boot.d/99-tunnel setupB
 ```
+
+### ToDo
+* maybe add to https://github.com/anderspitman/awesome-tunneling
