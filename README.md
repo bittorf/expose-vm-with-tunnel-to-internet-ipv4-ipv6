@@ -38,3 +38,7 @@ wget "$URL" && chmod +x 99-tunnel && /etc/boot.d/99-tunnel setupB
 
 ### ToDo
 * maybe add to https://github.com/anderspitman/awesome-tunneling
+* make it work with: https://github.com/WireGuard/wireguard-go
+* make it work with: https://github.com/cloudflare/boringtun
+* make it work with: userspace UML linux: https://github.com/bittorf/kritis-linux
+
